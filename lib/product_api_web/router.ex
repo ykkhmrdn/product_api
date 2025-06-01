@@ -20,10 +20,12 @@ defmodule ProductApiWeb.Router do
     get "/", PageController, :home
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", ProductApiWeb do
-  #   pipe_through :api
-  # end
+  # API routes
+  scope "/api", ProductApiWeb do
+    pipe_through :api
+
+    resources "/products", ProductController, except: [:new, :edit]
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:product_api, :dev_routes) do
@@ -38,7 +40,6 @@ defmodule ProductApiWeb.Router do
       pipe_through :browser
 
       live_dashboard "/dashboard", metrics: ProductApiWeb.Telemetry
-      forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end
 end
