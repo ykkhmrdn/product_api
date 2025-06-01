@@ -1,12 +1,14 @@
 defmodule ProductApi.Products do
   @moduledoc """
-  The Products context.
+  The Products context with caching support.
   """
 
   import Ecto.Query, warn: false
   alias ProductApi.Repo
-
+  alias ProductApi.Cache
   alias ProductApi.Products.Product
+
+  require Logger
 
   @doc """
   Returns the list of products with pagination.
@@ -48,7 +50,7 @@ defmodule ProductApi.Products do
   end
 
   @doc """
-  Gets a single product.
+  Gets a single product with caching support.
 
   Raises `Ecto.NoResultsError` if the Product does not exist.
 
@@ -61,7 +63,25 @@ defmodule ProductApi.Products do
       ** (Ecto.NoResultsError)
 
   """
-  def get_product!(id), do: Repo.get!(Product, id)
+  def get_product!(id) do
+    case Cache.get_product(id) do
+      {:ok, product} ->
+        Logger.debug("Product #{id} retrieved from cache")
+        product
+      
+      {:error, :not_found} ->
+        Logger.debug("Product #{id} not in cache, fetching from database")
+        product = Repo.get!(Product, id)
+        
+        # Cache the product for future requests
+        Cache.set_product(id, product)
+        product
+      
+      {:error, _reason} ->
+        Logger.warning("Cache error for product #{id}, falling back to database")
+        Repo.get!(Product, id)
+    end
+  end
 
   @doc """
   Creates a product.
@@ -82,7 +102,7 @@ defmodule ProductApi.Products do
   end
 
   @doc """
-  Updates a product.
+  Updates a product and invalidates cache.
 
   ## Examples
 
@@ -94,13 +114,25 @@ defmodule ProductApi.Products do
 
   """
   def update_product(%Product{} = product, attrs) do
-    product
-    |> Product.changeset(attrs)
-    |> Repo.update()
+    result = 
+      product
+      |> Product.changeset(attrs)
+      |> Repo.update()
+    
+    case result do
+      {:ok, updated_product} ->
+        # Invalidate cache since product was updated
+        Cache.invalidate_product(product.id)
+        Logger.debug("Product #{product.id} cache invalidated after update")
+        {:ok, updated_product}
+      
+      error ->
+        error
+    end
   end
 
   @doc """
-  Deletes a product.
+  Deletes a product and invalidates cache.
 
   ## Examples
 
@@ -112,7 +144,18 @@ defmodule ProductApi.Products do
 
   """
   def delete_product(%Product{} = product) do
-    Repo.delete(product)
+    result = Repo.delete(product)
+    
+    case result do
+      {:ok, deleted_product} ->
+        # Invalidate cache since product was deleted
+        Cache.invalidate_product(product.id)
+        Logger.debug("Product #{product.id} cache invalidated after deletion")
+        {:ok, deleted_product}
+      
+      error ->
+        error
+    end
   end
 
   @doc """
