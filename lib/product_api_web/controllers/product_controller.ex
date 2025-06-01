@@ -6,9 +6,13 @@ defmodule ProductApiWeb.ProductController do
 
   action_fallback ProductApiWeb.FallbackController
 
-  def index(conn, _params) do
-    products = Products.list_products()
-    render(conn, :index, products: products)
+  def index(conn, params) do
+    page = String.to_integer(params["page"] || "1")
+    result = Products.list_products(page: page)
+    
+    conn
+    |> put_view(json: ProductApiWeb.ProductJSON)
+    |> render(:index, products: result.products, pagination: result.pagination)
   end
 
   def create(conn, product_params) do

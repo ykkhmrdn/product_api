@@ -2,10 +2,13 @@ defmodule ProductApiWeb.ProductJSON do
   alias ProductApi.Products.Product
 
   @doc """
-  Renders a list of products.
+  Renders a list of products with pagination.
   """
-  def index(%{products: products}) do
-    %{data: for(product <- products, do: data(product))}
+  def index(%{products: products, pagination: pagination}) do
+    %{
+      data: for(product <- products, do: data(product)),
+      pagination: pagination
+    }
   end
 
   @doc """

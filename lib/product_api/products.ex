@@ -9,16 +9,42 @@ defmodule ProductApi.Products do
   alias ProductApi.Products.Product
 
   @doc """
-  Returns the list of products.
+  Returns the list of products with pagination.
 
   ## Examples
 
       iex> list_products()
       [%Product{}, ...]
 
+      iex> list_products(page: 2)
+      [%Product{}, ...]
+
   """
-  def list_products do
-    Repo.all(Product)
+  def list_products(opts \\ []) do
+    page = Keyword.get(opts, :page, 1)
+    per_page = Keyword.get(opts, :per_page, 10)
+    
+    offset = (page - 1) * per_page
+    
+    products = 
+      Product
+      |> order_by(desc: :inserted_at)
+      |> limit(^per_page)
+      |> offset(^offset)
+      |> Repo.all()
+    
+    total_count = Repo.aggregate(Product, :count, :id)
+    total_pages = ceil(total_count / per_page)
+    
+    %{
+      products: products,
+      pagination: %{
+        page: page,
+        per_page: per_page,
+        total: total_count,
+        total_pages: total_pages
+      }
+    }
   end
 
   @doc """
