@@ -3,6 +3,7 @@ defmodule ProductApiWeb.ProductController do
 
   alias ProductApi.Products
   alias ProductApi.Products.Product
+  alias ProductApi.Currency
 
   action_fallback ProductApiWeb.FallbackController
 
@@ -26,7 +27,18 @@ defmodule ProductApiWeb.ProductController do
 
   def show(conn, %{"id" => id}) do
     product = Products.get_product!(id)
-    render(conn, :show, product: product)
+    
+    # Convert price to USD
+    price_idr_float = Decimal.to_float(product.price_idr)
+    
+    case Currency.convert_idr_to_usd(price_idr_float) do
+      {:ok, price_usd} ->
+        render(conn, :show, product: product, price_usd: price_usd)
+      
+      {:error, _reason} ->
+        # Fallback to nil if conversion fails
+        render(conn, :show, product: product, price_usd: nil)
+    end
   end
 
   def update(conn, %{"id" => id} = params) do
