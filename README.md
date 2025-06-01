@@ -418,7 +418,7 @@ This project is created for technical assessment purposes.
 
 ---
 
-**Developed by:** zyxkoo
+**Developed by:** zyxkoo  
 **Framework:** Phoenix Framework (Elixir)  
 **Database:** PostgreSQL  
 **API Version:** v1
